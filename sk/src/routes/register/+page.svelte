@@ -1,8 +1,8 @@
 <!-- src/routes/register/+page.svelte -->
 <script>
-	import { authStore } from '$lib/stores/auth.svelte.js';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
 
 	// Form state
 	let email = $state('');
@@ -142,7 +142,7 @@
 				<h2 class="card-title">Create Account</h2>
 				<p class="card-subtitle">Join our daily auction community</p>
 			</div>
-			<form onsubmit={handleSubmit}>
+			<form method="POST" action="?/register" use:enhance>
 				<!-- Full Name Field -->
 				<div class="form-group">
 					<label class="form-label" for="full-name">Full Name</label>
@@ -283,7 +283,7 @@
 					</div>
 				{/if}
 				<!-- Submit Button -->
-				<button type="submit" class="btn btn-primary btn-block mt-lg" disabled={authStore.loading || !isFormValid}>
+				<button formaction="?/register" class="btn btn-primary btn-block mt-lg" disabled={authStore.loading || !isFormValid}>
 					{#if authStore.loading}
 						<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
 							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

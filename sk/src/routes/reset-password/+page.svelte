@@ -1,6 +1,5 @@
 <!-- src/routes/reset-password/+page.svelte -->
 <script>
-	import { authStore } from '$lib/stores/auth.svelte.js';
 	
 	let email = '';
 	let isSubmitted = false;

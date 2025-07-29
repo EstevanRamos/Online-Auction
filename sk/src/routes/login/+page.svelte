@@ -1,31 +1,22 @@
 <!-- src/routes/login/+page.svelte -->
 <script>
-	import { authStore } from '$lib/stores/auth.svelte.js';
+
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
 
 	// Form state
 	let email = $state('');
 	let password = $state('');
-	let showPassword = $state(false);
+	let showPassword = $state(true);
 	let rememberMe = $state(false);
 
-	async function handleSubmit(event) {
-		event.preventDefault();
-		authStore.clearError();
-
-		// Basic validation
-		if (!email || !password) {
-			authStore.error = 'Please fill in all fields';
-			return;
-		}
-		console.log(email, password);
-		await authStore.login(email, password);
-	}
+	// Get form data from props
+	let form = $props();
 
 	function togglePasswordVisibility() {
 		showPassword = !showPassword;
 	}
+
 </script>
 
 <svelte:head>
@@ -40,16 +31,23 @@
 				<h2 class="card-title">Login</h2>
 				<p class="card-subtitle">Welcome back! Please enter your details</p>
 			</div>
-			<form onsubmit={handleSubmit}>
+			
+			{#if form?.error}
+				<div class="error-message">
+					<p>{form.error}</p>
+				</div>
+			{/if}
+			
+			<form method="POST" action="?/login" use:enhance>
 				<div class="form-group">
 					<label class="form-label" for="login-email">Email</label>
-					<input type="email" id="email" class="form-input" placeholder="Enter your email" bind:value={email} required disabled={authStore.loading} autocomplete="email" />
+					<input type="email" id="email" name="email" class="form-input" placeholder="Enter your email"  required autocomplete="email" />
 				</div>
 				<div class="form-group">
 					<label class="form-label" for="login-password">Password</label>
 					<div class="password-field" style="position:relative;">
-						<input type={showPassword ? 'text' : 'password'} id="password" class="form-input" placeholder="Enter your password" bind:value={password} required disabled={authStore.loading} autocomplete="current-password" />
-						<button type="button" class="password-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);" onclick={togglePasswordVisibility} disabled={authStore.loading}>
+						<input type={showPassword ? 'text' : 'password'} id="password" name="password" class="form-input" placeholder="Enter your password"  required  autocomplete="current-password" />
+						<button type="button" class="password-toggle" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);" onclick={togglePasswordVisibility}>
 							{#if showPassword}
 								<!-- Eye Off Icon -->
 								<svg class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,20 +65,12 @@
 				</div>
 				<div class="d-flex justify-between align-center">
 					<div class="checkbox-group">
-						<input type="checkbox" id="remember-me" class="checkbox-input" bind:checked={rememberMe} disabled={authStore.loading} />
+						<input type="checkbox" id="remember-me" name="rememberMe" class="checkbox-input" />
 						<label for="remember-me" class="checkbox-label">Remember me</label>
 					</div>
 					<a href="/reset-password" class="link">Forgot Password?</a>
 				</div>
-				{#if authStore.error}
-					<div class="alert alert-danger mt-md">{authStore.error}</div>
-				{/if}
-				<button type="submit" class="btn btn-primary btn-block mt-lg" disabled={authStore.loading}>
-					{#if authStore.loading}
-						Signing in...
-					{:else}
-						Login
-					{/if}
+				<button type="submit" class="btn btn-primary btn-block mt-lg" >login
 				</button>
 				<p class="text-center mt-md">
 					Don't have an account? <a href="/register" class="link">Register</a>
@@ -277,6 +267,16 @@
 	.success-message i {
 		color: var(--cactus-green);
 		margin-right: var(--spacing-xs);
+	}
+
+	.error-message {
+		background-color: rgba(239, 68, 68, 0.1);
+		border-left: 4px solid #ef4444;
+		padding: var(--spacing-md);
+		border-radius: var(--border-radius-sm);
+		margin-bottom: var(--spacing-lg);
+		color: #dc2626;
+		font-size: 14px;
 	}
 
 	.page-title {

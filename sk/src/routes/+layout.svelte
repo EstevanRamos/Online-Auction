@@ -1,5 +1,23 @@
 <script>
   import "../styles.css";
+  let {children, data} = $props()
+  console.log(data.user)
+
+  async function handleLogout() {
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        window.location.href = '/';
+      } else {
+        console.error('Logout failed');
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  }
 </script>
 
 
@@ -20,10 +38,17 @@
                 <li><a href="/">Contact</a></li>
             </ul>
             
-            <div class="auth-buttons">
-                <a href="/login" class="btn btn-outline">Login</a>
-                <a href="/register" class="btn btn-primary">Register</a>
-            </div>
+            {#if false}
+                <div class="auth-buttons">
+                    <a href="/login" class="btn btn-outline">Login</a>
+                    <a href="/register" class="btn btn-primary">Register</a>
+                </div>
+            {:else}
+                <div class="auth-buttons">
+                    <button type="button" class="btn btn-outline" onclick={handleLogout}>Logout</button>
+                </div>
+            {/if}
         </div>
     </nav>
-<slot />
+
+{@render children()}
