@@ -524,7 +524,7 @@
         }
 
 .requirements-box {
-  background: #fff8f0;
+  background: #fdfbf7;
   border-left: 4px solid var(--golden-orange);
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--radius-md);

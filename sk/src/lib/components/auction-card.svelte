@@ -220,7 +220,7 @@
 		</div>
 
 		<!-- Time Until Start/End -->
-		<div class="footer">
+		<div class="card-footer">
 			<div class="footer-text">
 				{#if getAuctionStatus() === 'live'}
 					<span class="footer-label">Ends in:</span>
@@ -419,7 +419,7 @@
     color: var(--white);
   }
 
-  .footer {
+  .card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;

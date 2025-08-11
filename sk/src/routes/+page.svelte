@@ -115,26 +115,7 @@
         </div>
     </section>
     
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container footer-container">
-            <a href="#" class="footer-logo">
-                <i class="ri-auction-line"></i>
-                DailyAuction
-            </a>
-            
-            <ul class="footer-links">
-                <li><a href="#">About</a></li>
-                <li><a href="#">Contact</a></li>
-                <li><a href="#">Terms</a></li>
-                <li><a href="#">Privacy</a></li>
-            </ul>
-            
-            <div class="copyright">
-                © 2023 DailyAuction. All rights reserved.
-            </div>
-        </div>
-    </footer>
+
 </div>
 
     <style>
@@ -246,7 +227,7 @@
             position: absolute;
             top: var(--spacing-md);
             right: var(--spacing-md);
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(253, 251, 247, 0.8);
             border-radius: 50%;
             width: 36px;
             height: 36px;
@@ -264,7 +245,7 @@
         }
         
         .watchlist-btn:hover {
-            background-color: rgba(255, 255, 255, 1);
+            background-color: rgba(253, 251, 247, 1);
         }
         
         .card-content {
@@ -306,55 +287,5 @@
             color: var(--desert-red);
         }
         
-        /* Footer */
-        .footer {
-            background-color: var(--dark-brown);
-            color: var(--light-sand);
-            padding: var(--spacing-xl) 0;
-        }
-        
-        .footer-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .footer-logo {
-            color: var(--golden-orange);
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 20px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-        }
-        
-        .footer-logo i {
-            margin-right: var(--spacing-xs);
-        }
-        
-        .footer-links {
-            display: flex;
-            list-style: none;
-        }
-        
-        .footer-links li {
-            margin: 0 var(--spacing-md);
-        }
-        
-        .footer-links a {
-            color: var(--light-sand);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        
-        .footer-links a:hover {
-            color: var(--golden-orange);
-        }
-        
-        .copyright {
-            color: var(--light-sand);
-            opacity: 0.7;
-            font-size: 14px;
-        }  
+       
     </style>

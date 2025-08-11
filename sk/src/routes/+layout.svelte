@@ -4,7 +4,7 @@
   console.log(data.user)
   
   // Mobile menu state
-  let isMobileMenuOpen = false;
+  let isMobileMenuOpen = $state(false);
 
   function toggleMobileMenu() {
     isMobileMenuOpen = !isMobileMenuOpen;
@@ -34,9 +34,12 @@
 <!-- Navigation Bar -->
 <nav class="navbar">
     <div class="container nav-container">
-        <a href="#" class="logo" onclick={closeMobileMenu}>
-            <i class="ri-auction-line"></i>
-            <span class="logo-text">DailyAuction</span>
+        <a href="/" class="logo" onclick={closeMobileMenu}>
+            <img src="/Sun City Market cropped.PNG" alt="Sun City Market" class="logo-image">
+            <div class="logo-text-container">
+                <span class="logo-text-line">Sun City</span>
+                <span class="logo-text-line">Market</span>
+            </div>
         </a>
         
         <!-- Mobile menu toggle -->
@@ -91,3 +94,24 @@
 </nav>
 
 {@render children()}
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <a href="#" class="footer-logo">
+                <i class="ri-auction-line"></i>
+                Sun City Market
+            </a>
+            
+            <ul class="footer-links">
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+                <li><a href="#">Terms</a></li>
+                <li><a href="#">Privacy</a></li>
+            </ul>
+            
+            <div class="copyright">
+                © 2023 Sun City Market. All rights reserved.
+            </div>
+        </div>
+    </footer>
