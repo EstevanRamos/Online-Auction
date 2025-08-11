@@ -4,7 +4,7 @@
         <div class="container hero-content">
             <h1>Discover Unique Treasures Every Day</h1>
             <p>New auctions daily at 10 AM</p>
-            <a href="#" class="btn btn-primary btn-large">Enter Today's Auction</a>
+            <a href="/auction" class="btn btn-primary btn-large">Enter Today's Auction</a>
         </div>
     </section>
     
