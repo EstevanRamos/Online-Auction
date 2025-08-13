@@ -1,4 +1,5 @@
 <script>
+	import { goto } from '$app/navigation';
 	export let auction;
 
 	// Format date and time with error handling
@@ -101,12 +102,12 @@
 
 	function handleAuctionClick() {
 		// Navigate to auction details showing items for that day
-		console.log(`Viewing auction ${auction.id} items`);
+		goto(`/auction/${auction.id}`);
 	}
 
 	function handleViewItems(event) {
 		event.stopPropagation();
-		console.log(`Viewing items for auction ${auction.id}`);
+		goto(`/auction/${auction.id}`);
 	}
 
 	function handleKeydown(event) {
@@ -118,7 +119,7 @@
 	}
 </script>
 
-<div class="auction-card" role="button" tabindex="0" onclick={handleAuctionClick} onkeydown={handleKeydown}>
+<div class="auction-card" role="button" tabindex="0" on:click={handleAuctionClick} on:keydown={handleKeydown}>
 	<!-- Auction Image -->
 	<div class="image-wrapper">
 		<img src={auction?.image || '/placeholder.svg?size=wide'} alt={auction?.title || 'Auction'} class="image" />
@@ -236,7 +237,7 @@
 					</span>
 				{/if}
 			</div>
-			<button class="view-items-btn" onclick={handleViewItems}>View Items</button>
+			<button class="view-items-btn" on:click={handleViewItems}>View Items</button>
 		</div>
 	</div>
 </div>

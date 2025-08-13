@@ -26,7 +26,7 @@
 <!-- Load More Button - Only show if there are auctions -->
 {#if auctions.length > 0}
 	<div class="loadMoreWrapper">
-		<button class="loadMoreButton" onclick={loadMoreAuctions}>Load More Auctions</button>
+		<button class="loadMoreButton" on:click={loadMoreAuctions}>Load More Auctions</button>
 	</div>
 {/if}
 
