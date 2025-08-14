@@ -4,6 +4,9 @@
 
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { userStore } from '$lib/stores/auth.svelte.js';
+    import { formatDateTime, formatDate, formatTime } from '$lib/utils/datetime.js';
+    import WatchlistButton from '$lib/components/watchlist-button.svelte';
 
     // Extract data with fallbacks
     const { auction, auctionItem, bids = [], stats = {}, reserveMet = true } = data;
@@ -17,57 +20,7 @@
     const hasImages = auctionItem?.images && auctionItem.images.length > 0;
     const hasBids = bids.length > 0;
 
-    // Format date and time
-    function formatDate(dateString) {
-        if (!dateString) return 'TBD';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'TBD';
-            return date.toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-            });
-        } catch (error) {
-            console.error('Error formatting date:', error);
-            return 'TBD';
-        }
-    }
-
-    function formatTime(dateString) {
-        if (!dateString) return 'TBD';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'TBD';
-            return date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-            });
-        } catch (error) {
-            console.error('Error formatting time:', error);
-            return 'TBD';
-        }
-    }
-
-    function formatDateTime(dateString) {
-        if (!dateString) return 'TBD';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'TBD';
-            return date.toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-            });
-        } catch (error) {
-            console.error('Error formatting date time:', error);
-            return 'TBD';
-        }
-    }
+    // Date formatting functions are now imported from utils
 
     // Image carousel functions
     function nextImage() {
@@ -160,6 +113,11 @@
                                 alt="{auctionItem.title} - Image {currentImageIndex + 1}" 
                                 class="main-image" 
                             />
+                            
+                            <!-- Watchlist Button -->
+                            <div class="watchlist-overlay">
+                                <WatchlistButton itemId={auctionItem?.id} size="large" />
+                            </div>
                             
                             <!-- Navigation Arrows -->
                             {#if totalImages > 1}
@@ -261,16 +219,31 @@
                         {/if}
                     </div>
 
-                    <!-- Place Bid Button -->
-                    <button class="place-bid-btn" on:click={placeBid} disabled={getItemStatus() !== 'active'}>
-                        {#if getItemStatus() === 'active'}
-                            Place Bid
-                        {:else if getItemStatus() === 'sold'}
-                            Item Sold
-                        {:else}
-                            Bidding Ended
-                        {/if}
-                    </button>
+                    <!-- Place Bid Button / Login Message -->
+                    {#if userStore.isAuthenticated}
+                        <button class="place-bid-btn" on:click={placeBid} disabled={getItemStatus() !== 'active'}>
+                            {#if getItemStatus() === 'active'}
+                                Place Bid
+                            {:else if getItemStatus() === 'sold'}
+                                Item Sold
+                            {:else}
+                                Bidding Ended
+                            {/if}
+                        </button>
+                    {:else}
+                        <div class="auth-required">
+                            <div class="auth-message">
+                                <svg class="auth-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span>Please log in to place bids</span>
+                            </div>
+                            <div class="auth-buttons">
+                                <a href="/login" class="login-btn">Login</a>
+                                <a href="/register" class="register-btn">Sign Up</a>
+                            </div>
+                        </div>
+                    {/if}
 
                     <!-- Time Remaining -->
                     {#if timeRemaining && getItemStatus() === 'active'}
@@ -501,6 +474,13 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
+    .watchlist-overlay {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+
     .main-image {
         width: 100%;
         height: 400px;
@@ -722,6 +702,87 @@
     .place-bid-btn:disabled {
         background-color: #6b7280;
         cursor: not-allowed;
+    }
+
+    .auth-required {
+        width: 100%;
+        background-color: var(--white);
+        border: 2px dashed var(--earthy-brown);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .auth-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--earthy-brown);
+        font-size: 1rem;
+    }
+
+    .auth-icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: var(--golden-orange);
+    }
+
+    .auth-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .login-btn,
+    .register-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+        border: 2px solid;
+    }
+
+    .login-btn {
+        background-color: var(--golden-orange);
+        color: var(--white);
+        border-color: var(--golden-orange);
+    }
+
+    .login-btn:hover {
+        background-color: #c27f2a;
+        border-color: #c27f2a;
+        transform: translateY(-1px);
+    }
+
+    .register-btn {
+        background-color: transparent;
+        color: var(--earthy-brown);
+        border-color: var(--earthy-brown);
+    }
+
+    .register-btn:hover {
+        background-color: var(--earthy-brown);
+        color: var(--white);
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 640px) {
+        .auth-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .login-btn,
+        .register-btn {
+            width: 100%;
+            max-width: 200px;
+        }
     }
 
     .time-remaining {
