@@ -1,6 +1,7 @@
 // src/lib/stores/auth.svelte.js
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
+import { pb } from '$lib/pocketbase.js';
 
 
 class UserStore {
@@ -10,7 +11,7 @@ class UserStore {
 
 	constructor() {
 		// Initialize auth state from PocketBase on client side
-		if (browser) {
+		if (browser && pb) {
 			this.user = pb.authStore.model;
 			
 			// Listen for auth changes
