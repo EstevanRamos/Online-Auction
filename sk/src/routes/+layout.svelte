@@ -1,7 +1,6 @@
 <script>
   import "../styles.css";
   let {children, data} = $props()
-  console.log(data.user)
   
   // Mobile menu state
   let isMobileMenuOpen = $state(false);
@@ -29,6 +28,7 @@
       console.error('Error during logout:', error);
     }
   }
+  
 </script>
 
 <!-- Navigation Bar -->

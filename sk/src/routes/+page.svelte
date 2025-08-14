@@ -1,3 +1,7 @@
+<script>
+    import WatchlistButton from '$lib/components/watchlist-button.svelte';
+</script>
+
 <div class="container">
     <!-- Hero Section -->
     <section class="hero">
@@ -20,8 +24,8 @@
                 <div class="auction-card">
                     <div class="card-image">
                         <i class="ri-image-line"></i>
-                        <div class="watchlist-btn">
-                            <i class="ri-heart-line"></i>
+                        <div class="watchlist-btn-container">
+                            <WatchlistButton itemId="demo-item-1" />
                         </div>
                     </div>
                     <div class="card-content">
@@ -223,29 +227,10 @@
             opacity: 0.5;
         }
         
-        .watchlist-btn {
+        .watchlist-btn-container {
             position: absolute;
             top: var(--spacing-md);
             right: var(--spacing-md);
-            background-color: rgba(253, 251, 247, 0.8);
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        
-        .watchlist-btn i {
-            font-size: 20px;
-            color: var(--desert-red);
-            opacity: 1;
-        }
-        
-        .watchlist-btn:hover {
-            background-color: rgba(253, 251, 247, 1);
         }
         
         .card-content {

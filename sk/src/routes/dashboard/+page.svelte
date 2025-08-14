@@ -1,6 +1,6 @@
 <!-- src/routes/dashboard/+page.svelte -->
 <script>
-	import { authStore } from '$lib/stores/auth.svelte.js';
+	import { authStore } from '$lib/stores/user.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 

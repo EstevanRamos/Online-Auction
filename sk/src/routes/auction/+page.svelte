@@ -50,7 +50,7 @@
 				<div class="no-data-content">
 					<h2>No Auctions Available</h2>
 					<p>There are currently no auctions scheduled. Please check back later or contact us for more information.</p>
-					<button class="refresh-btn" on:click={() => window.location.reload()}>
+					<button class="refresh-btn" onclick={() => window.location.reload()}>
 						Refresh Page
 					</button>
 				</div>

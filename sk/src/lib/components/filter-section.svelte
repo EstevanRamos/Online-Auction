@@ -1,10 +1,20 @@
 <script>
-	let selectedCategory = "all";
-	let selectedTimeframe = "all";
-	let selectedSort = "ending-soon";
-	let showCategoryDropdown = false;
-	let showTimeframeDropdown = false;
-	let showSortDropdown = false;
+	import { browser } from '$app/environment';
+	import { createEventDispatcher } from 'svelte';
+
+	// Props
+	let { initialFilters = {} } = $props();
+
+	// Event dispatcher for parent components
+	const dispatch = createEventDispatcher();
+
+	// Initialize state from props or localStorage
+	let selectedCategory = $state(initialFilters.category || (browser && localStorage.getItem('auction-filter-category')) || "all");
+	let selectedTimeframe = $state(initialFilters.timeframe || (browser && localStorage.getItem('auction-filter-timeframe')) || "all");
+	let selectedSort = $state(initialFilters.sort || (browser && localStorage.getItem('auction-filter-sort')) || "ending-soon");
+	let showCategoryDropdown = $state(false);
+	let showTimeframeDropdown = $state(false);
+	let showSortDropdown = $state(false);
 
 	const categories = [
 		{ value: "all", label: "All Categories" },
@@ -27,26 +37,66 @@
 		{ value: "newest", label: "Newest First" },
 		{ value: "most-bids", label: "Most Bids" },
 		{ value: "highest-value", label: "Highest Value" },
+		{ value: "price-low", label: "Price: Low to High" },
+		{ value: "price-high", label: "Price: High to Low" },
+		{ value: "ending-today", label: "Ending Today" },
+		{ value: "most-watched", label: "Most Watched" },
+		{ value: "reserve-met", label: "Reserve Met" },
+		{ value: "reserve-not-met", label: "Reserve Not Met" },
+		{ value: "recently-added", label: "Recently Added" },
+		{ value: "alphabetical", label: "A-Z" },
 	];
 
 	function selectCategory(value) {
 		selectedCategory = value;
 		showCategoryDropdown = false;
+		savePreferences();
+		emitFilterChange();
 	}
 
 	function selectTimeframe(value) {
 		selectedTimeframe = value;
 		showTimeframeDropdown = false;
+		savePreferences();
+		emitFilterChange();
 	}
 
 	function selectSort(value) {
 		selectedSort = value;
 		showSortDropdown = false;
+		savePreferences();
+		emitFilterChange();
 	}
 
 	function removeFilter(filterType) {
 		if (filterType === "category") selectedCategory = "all";
 		if (filterType === "timeframe") selectedTimeframe = "all";
+		savePreferences();
+		emitFilterChange();
+	}
+
+	function savePreferences() {
+		if (browser) {
+			localStorage.setItem('auction-filter-category', selectedCategory);
+			localStorage.setItem('auction-filter-timeframe', selectedTimeframe);
+			localStorage.setItem('auction-filter-sort', selectedSort);
+		}
+	}
+
+	function emitFilterChange() {
+		dispatch('filterChange', {
+			category: selectedCategory,
+			timeframe: selectedTimeframe,
+			sort: selectedSort
+		});
+	}
+
+	function clearAllFilters() {
+		selectedCategory = "all";
+		selectedTimeframe = "all";
+		selectedSort = "ending-soon";
+		savePreferences();
+		emitFilterChange();
 	}
 
 	// Close dropdowns when clicking outside
@@ -62,11 +112,11 @@
 	import { onMount, onDestroy } from 'svelte';
 	
 	onMount(() => {
-		document.addEventListener('click', handleClickOutside);
+		//document.addEventListener('click', handleClickOutside);
 	});
 	
 	onDestroy(() => {
-		document.removeEventListener('click', handleClickOutside);
+		//document.removeEventListener('click', handleClickOutside);
 	});
 </script>
 
@@ -168,6 +218,20 @@
 					{timeframes.find((t) => t.value === selectedTimeframe)?.label}
 					<button class="badge-close" onclick={() => removeFilter("timeframe")}>×</button>
 				</span>
+			{/if}
+			{#if selectedSort !== "ending-soon"}
+				<span class="filter-badge sort-badge">
+					Sort: {sortOptions.find((s) => s.value === selectedSort)?.label}
+					<button class="badge-close" onclick={() => selectSort("ending-soon")}>×</button>
+				</span>
+			{/if}
+			{#if selectedCategory !== "all" || selectedTimeframe !== "all" || selectedSort !== "ending-soon"}
+				<button class="clear-all-btn" onclick={clearAllFilters}>
+					<svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+					Clear All
+				</button>
 			{/if}
 		</div>
 	</div>
@@ -405,6 +469,37 @@
 
   .badge-close:hover {
     background-color: rgba(253, 251, 247, 0.2);
+  }
+
+  .sort-badge {
+    background-color: var(--earthy-brown);
+    color: var(--white);
+  }
+
+  .clear-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background-color: transparent;
+    color: var(--desert-red);
+    border: 1px solid var(--desert-red);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: 'Open Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .clear-all-btn:hover {
+    background-color: var(--desert-red);
+    color: var(--white);
+  }
+
+  .clear-icon {
+    width: 1rem;
+    height: 1rem;
   }
 
   /* Mobile optimizations */

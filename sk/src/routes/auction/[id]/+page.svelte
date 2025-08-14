@@ -4,6 +4,7 @@
 
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { formatDate, formatTime } from '$lib/utils/datetime.js';
 
     // Extract data with fallbacks
     const { auction, auctionItems = [], stats = {} } = data;
@@ -11,39 +12,7 @@
 
     // Check if we have data
     const hasItems = auctionItems.length > 0;
-
-    // Format date and time
-    function formatDate(dateString) {
-        if (!dateString) return 'TBD';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'TBD';
-            return date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-            });
-        } catch (error) {
-            console.error('Error formatting date:', error);
-            return 'TBD';
-        }
-    }
-
-    function formatTime(dateString) {
-        if (!dateString) return 'TBD';
-        try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'TBD';
-            return date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-            });
-        } catch (error) {
-            console.error('Error formatting time:', error);
-            return 'TBD';
-        }
-    }
+    // Date and time formatting functions now imported from utils
 
     // Get auction status
     function getAuctionStatus() {
@@ -156,7 +125,7 @@
             {#if hasItems}
                 <div class="items-grid">
                     {#each auctionItems as item (item.id)}
-                        <div class="item-card" role="button" tabindex="0" onclick={() => viewItem(item.id)} on:keydown={(e) => e.key === 'Enter' && viewItem(item.id)}>
+                        <div class="item-card" role="button" tabindex="0" onclick={() => viewItem(item.id)} onkeydown={(e) => e.key === 'Enter' && viewItem(item.id)}>
                             <!-- Item Image -->
                             <div class="item-image-wrapper">
                                 <img src={item.images[0] || '/placeholder.svg'} alt={item.title} class="item-image" />

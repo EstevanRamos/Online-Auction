@@ -1,87 +1,11 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { formatDate, getTimeRemaining, formatTime } from '$lib/utils/datetime.js';
+	import WatchlistButton from './watchlist-button.svelte';
+	
 	export let auction;
 
-	// Format date and time with error handling
-	function formatDate(dateString) {
-		if (!dateString) return 'TBD';
-		try {
-			const date = new Date(dateString);
-			if (isNaN(date.getTime())) return 'TBD';
-			return date.toLocaleDateString("en-US", {
-				month: "short",
-				day: "numeric",
-				year: "numeric",
-			});
-		} catch (error) {
-			console.error('Error formatting date:', error);
-			return 'TBD';
-		}
-	}
-
-	function formatTime(dateString) {
-		if (!dateString) return 'TBD';
-		try {
-			const date = new Date(dateString);
-			if (isNaN(date.getTime())) return 'TBD';
-			return date.toLocaleTimeString("en-US", {
-				hour: "numeric",
-				minute: "2-digit",
-				hour12: true,
-			});
-		} catch (error) {
-			console.error('Error formatting time:', error);
-			return 'TBD';
-		}
-	}
-
-	// Calculate time until auction ends
-	function getTimeUntilEnd(endDate) {
-		if (!endDate) return 'TBD';
-		try {
-			const now = new Date();
-			const end = new Date(endDate);
-			if (isNaN(end.getTime())) return 'TBD';
-			
-			const diff = end.getTime() - now.getTime();
-
-			if (diff <= 0) return "Ended";
-
-			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-			const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-			const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-			if (days > 0) return `${days}d ${hours}h`;
-			if (hours > 0) return `${hours}h ${minutes}m`;
-			return `${minutes}m`;
-		} catch (error) {
-			console.error('Error calculating time until end:', error);
-			return 'TBD';
-		}
-	}
-
-	// Calculate time until auction starts
-	function getTimeUntilStart(startDate) {
-		if (!startDate) return 'TBD';
-		try {
-			const now = new Date();
-			const start = new Date(startDate);
-			if (isNaN(start.getTime())) return 'TBD';
-			
-			const diff = start.getTime() - now.getTime();
-
-			if (diff <= 0) return "Live now";
-
-			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-			const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-			if (days > 0) return `${days}d ${hours}h`;
-			return `${hours}h`;
-		} catch (error) {
-			console.error('Error calculating time until start:', error);
-			return 'TBD';
-		}
-	}
+	// Time calculation functions replaced with imported getTimeRemaining
 
 	// Get auction status with fallback
 	function getAuctionStatus() {
@@ -226,14 +150,14 @@
 				{#if getAuctionStatus() === 'live'}
 					<span class="footer-label">Ends in:</span>
 					<span class="footer-value">
-						{getTimeUntilEnd(auction?.endDate)}
+						{getTimeRemaining(auction?.endDate)}
 					</span>
 				{:else if getAuctionStatus() === 'ended' || getAuctionStatus() === 'cancelled'}
 					<span class="footer-label">Auction {getAuctionStatus() === 'cancelled' ? 'cancelled' : 'ended'}</span>
 				{:else}
 					<span class="footer-label">Starts in:</span>
 					<span class="footer-value">
-						{getTimeUntilStart(auction?.startDate)}
+						{getTimeRemaining(auction?.startDate)}
 					</span>
 				{/if}
 			</div>
