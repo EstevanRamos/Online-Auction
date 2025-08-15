@@ -6,10 +6,19 @@
     import { page } from '$app/state';
     import { formatDateTime, formatDate, formatTime } from '$lib/utils/datetime.js';
     import WatchlistButton from '$lib/components/watchlist-button.svelte';
+    import BidForm from '$lib/components/bid-form.svelte';
+    import BidHistory from '$lib/components/bid-history.svelte';
+    import { realtimeService } from '$lib/services/realtime.js';
+    import { onMount, onDestroy } from 'svelte';
 
     // Extract data with fallbacks
-    const { auction, auctionItem, bids = [], stats = {}, reserveMet = true } = data;
+    const { auction, auctionItem, bids: initialBids = [], stats = {}, reserveMet = true } = data;
     const { totalBids = 0, highestBid = 0, lowestBid = 0, averageBid = 0, timeRemaining = null } = stats;
+
+    // Reactive state for real-time updates
+    let currentBids = $state(initialBids);
+    let currentItem = $state(auctionItem);
+    let currentAuction = $state(auction);
 
     // Image carousel state
     let currentImageIndex = 0;
@@ -17,7 +26,7 @@
 
     // Check if we have data
     const hasImages = auctionItem?.images && auctionItem.images.length > 0;
-    const hasBids = bids.length > 0;
+    const hasBids = $derived(currentBids.length > 0);
 
     // Date formatting functions are now imported from utils
 
@@ -43,11 +52,25 @@
         goto('/auction');
     }
 
-    // Placeholder for future bidding functionality
-    function placeBid() {
-        console.log('Place bid functionality to be implemented');
-        // TODO: Implement bidding interface
+    // Bidding functionality
+    function handleBidSuccess(bidResult) {
+        console.log('Bid placed successfully:', bidResult);
+        // Optionally refresh page data or update local state
+        // Could trigger a real-time update here
     }
+
+    // Calculate derived bidding values
+    const currentBid = $derived(currentItem?.current_bid || currentItem?.startingBid || 0);
+    const bidIncrement = $derived(currentItem?.bid_increment || 10);
+    const minBid = $derived(currentBid + bidIncrement);
+    const isAuctionEnded = $derived(() => {
+        if (!currentItem?.end_time && !currentAuction?.end_time) return false;
+        const endTime = new Date(currentItem?.end_time || currentAuction?.end_time);
+        return new Date() >= endTime;
+    });
+
+    // Real-time subscription cleanup functions
+    let unsubscribeFunctions = [];
 
     // Get item status
     function getItemStatus() {
@@ -75,6 +98,78 @@
             default: return '#10b981';
         }
     }
+
+    // Real-time update handlers
+    function handleRealtimeUpdate(update) {
+        console.log('Real-time update received:', update);
+        
+        switch (update.type) {
+            case 'bid':
+                // Update bids list
+                if (update.action === 'create') {
+                    currentBids = [update.record, ...currentBids];
+                } else if (update.action === 'update') {
+                    currentBids = currentBids.map(bid => 
+                        bid.id === update.record.id ? update.record : bid
+                    );
+                }
+                break;
+                
+            case 'item':
+                // Update item data
+                if (update.action === 'update') {
+                    currentItem = { ...currentItem, ...update.record };
+                }
+                break;
+                
+            case 'auction':
+                // Update auction data (end time extensions, etc.)
+                if (update.action === 'update') {
+                    currentAuction = { ...currentAuction, ...update.record };
+                }
+                break;
+        }
+    }
+
+    // Initialize real-time subscriptions
+    onMount(() => {
+        if (auctionItem?.id) {
+            // Subscribe to bids for this item
+            const unsubBids = realtimeService.subscribeToItemBids(
+                auctionItem.id, 
+                handleRealtimeUpdate
+            );
+            unsubscribeFunctions.push(unsubBids);
+
+            // Subscribe to item updates
+            const unsubItem = realtimeService.subscribeToItemUpdates(
+                auctionItem.id, 
+                handleRealtimeUpdate
+            );
+            unsubscribeFunctions.push(unsubItem);
+        }
+
+        if (auction?.id) {
+            // Subscribe to auction updates
+            const unsubAuction = realtimeService.subscribeToAuctionUpdates(
+                auction.id, 
+                handleRealtimeUpdate
+            );
+            unsubscribeFunctions.push(unsubAuction);
+        }
+    });
+
+    // Clean up subscriptions on destroy
+    onDestroy(() => {
+        unsubscribeFunctions.forEach(unsubscribe => {
+            try {
+                unsubscribe();
+            } catch (error) {
+                console.warn('Error unsubscribing:', error);
+            }
+        });
+        unsubscribeFunctions = [];
+    });
 </script>
 
 <svelte:head>
@@ -218,31 +313,16 @@
                         {/if}
                     </div>
 
-                    <!-- Place Bid Button / Login Message -->
-                    {#if data.user}
-                        <button class="place-bid-btn" onclick={placeBid} disabled={getItemStatus() !== 'active'}>
-                            {#if getItemStatus() === 'active'}
-                                Place Bid
-                            {:else if getItemStatus() === 'sold'}
-                                Item Sold
-                            {:else}
-                                Bidding Ended
-                            {/if}
-                        </button>
-                    {:else}
-                        <div class="auth-required">
-                            <div class="auth-message">
-                                <svg class="auth-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                <span>Please log in to place bids</span>
-                            </div>
-                            <div class="auth-buttons">
-                                <a href="/login" class="login-btn">Login</a>
-                                <a href="/register" class="register-btn">Sign Up</a>
-                            </div>
-                        </div>
-                    {/if}
+                    <!-- Bid Form Component -->
+                    <BidForm 
+                        itemId={currentItem?.id}
+                        currentBid={currentBid}
+                        minBid={minBid}
+                        bidIncrement={bidIncrement}
+                        endTime={currentItem?.end_time || currentAuction?.end_time}
+                        isAuctionEnded={isAuctionEnded}
+                        onBidSuccess={handleBidSuccess}
+                    />
 
                     <!-- Time Remaining -->
                     {#if timeRemaining && getItemStatus() === 'active'}
@@ -310,40 +390,12 @@
         </div>
 
         <!-- Bidding History Section -->
-        <div class="bidding-history-section">
-            <h3 class="section-title">Bidding History</h3>
-            {#if hasBids}
-                <div class="bids-table">
-                    <div class="bids-header">
-                        <div class="bid-header-cell">Bidder</div>
-                        <div class="bid-header-cell">Amount</div>
-                        <div class="bid-header-cell">Time</div>
-                    </div>
-                    {#each bids as bid (bid.id)}
-                        <div class="bid-row">
-                            <div class="bid-cell bidder">
-                                {#if bid.bidder?.avatar}
-                                    <img src={bid.bidder.avatar} alt={bid.bidder.name} class="bidder-avatar" />
-                                {/if}
-                                <span class="bidder-name">{bid.bidder?.name || 'Anonymous'}</span>
-                            </div>
-                            <div class="bid-cell amount">${bid.amount}</div>
-                            <div class="bid-cell time">{formatDateTime(bid.timestamp)}</div>
-                        </div>
-                    {/each}
-                </div>
-            {:else}
-                <div class="no-bids-message">
-                    <div class="no-bids-content">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
-                        <h4>No Bids Yet</h4>
-                        <p>Be the first to place a bid on this item!</p>
-                    </div>
-                </div>
-            {/if}
-        </div>
+        <BidHistory 
+            itemId={currentItem?.id}
+            bids={currentBids}
+            refreshInterval={0}
+            className="bidding-history-section"
+        />
 
         <!-- Statistics Section -->
         <div class="statistics-section">

@@ -99,6 +99,7 @@ class UserStore {
 
     async removeFromWatchlist(itemId) {
         try{
+            console.log('Removing from watchlist:', itemId);
             const existing = await pb.collection('watchlist').getFirstListItem(`user = "${this.user.id}" && item = "${itemId}"`);
             await pb.collection('watchlist').delete(existing.id);
             return true;
@@ -109,7 +110,6 @@ class UserStore {
     }
     
     async checkWatchlist(itemId) {
-
         try{
             await pb.collection('watchlist').getFirstListItem(`user = "${this.user.id}" && item = "${itemId}"`);
             return true;

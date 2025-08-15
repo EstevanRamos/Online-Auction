@@ -1,41 +1,110 @@
 <!-- src/routes/dashboard/+page.svelte -->
 <script>
-	import { authStore } from '$lib/stores/user.svelte.js';
+	import { userStore } from '$lib/stores/user.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import UserProfileCard from '$lib/components/user-profile-card.svelte';
+	import DashboardStats from '$lib/components/dashboard/dashboard-stats.svelte';
+	import DashboardWatchlist from '$lib/components/dashboard/dashboard-watchlist.svelte';
+	import DashboardActivity from '$lib/components/dashboard/dashboard-activity.svelte';
+	import DashboardLoading from '$lib/components/dashboard/dashboard-loading.svelte';
+	import { pb } from '$lib/pocketbase.js';
+	import { timeAgo } from '$lib/utils/datetime.js';
 
 	// Redirect to login if not authenticated
-	onMount(() => {
-		if (!authStore.isAuthenticated) {
+	onMount(async () => {
+		if (!userStore.isAuthenticated) {
 			goto('/login');
+			return;
 		}
+		
+		// Load real dashboard data
+		await loadDashboardData();
 	});
 
-	// Mock data for dashboard - replace with real data later
+	// Dashboard data
 	let stats = $state({
-		watchedItems: 12,
-		activeBids: 3,
-		itemsWon: 8,
-		totalSpent: 2450.00
+		watchedItems: 0,
+		activeBids: 0,
+		itemsWon: 0,
+		totalSpent: 0
 	});
 
-	let recentActivity = $state([
-		{ type: 'bid', item: 'Vintage Camera', amount: 125.00, time: '2 hours ago' },
-		{ type: 'outbid', item: 'Art Deco Lamp', amount: 85.00, time: '4 hours ago' },
-		{ type: 'won', item: 'Antique Clock', amount: 220.00, time: '1 day ago' }
-	]);
+	let recentActivity = $state([]);
+	let watchlistItems = $state([]);
+	let loading = $state(true);
+	let error = $state(null);
 
-	function getActivityIcon(type) {
-		switch (type) {
-			case 'bid':
-				return { icon: '💰', color: 'text-blue-600', bg: 'bg-blue-100' };
-			case 'outbid':
-				return { icon: '⚠️', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-			case 'won':
-				return { icon: '🎉', color: 'text-green-600', bg: 'bg-green-100' };
-			default:
-				return { icon: '📝', color: 'text-gray-600', bg: 'bg-gray-100' };
+	// Load dashboard data
+	async function loadDashboardData() {
+		try {
+			loading = true;
+			error = null;
+
+			if (!userStore.user?.id) {
+				throw new Error('User not found');
+			}
+
+			const userId = userStore.user.id;
+
+			// Load watchlist count
+			const watchlistResponse = await pb.collection('watchlist').getList(1, 1, {
+				filter: `user="${userId}"`,
+				totalItems: true
+			});
+			stats.watchedItems = watchlistResponse.totalItems;
+
+			// Load active bids
+			const activeBidsResponse = await pb.collection('bids').getList(1, 1, {
+				filter: `bidder="${userId}" && is_winning=true`,
+				totalItems: true
+			});
+			stats.activeBids = activeBidsResponse.totalItems;
+
+			// Load recent activity (recent bids)
+			const recentBidsResponse = await pb.collection('bids').getList(1, 10, {
+				filter: `bidder="${userId}"`,
+				sort: '-created',
+				expand: 'item'
+			});
+
+			recentActivity = recentBidsResponse.items.map(bid => ({
+				type: bid.is_winning ? 'bid' : 'outbid',
+				item: bid.expand?.item_id?.title || 'Unknown Item',
+				amount: bid.amount,
+				time: timeAgo(bid.created),
+				id: bid.id
+			}));
+
+			// Load recent watchlist items
+			const watchlistResponse2 = await pb.collection('watchlist').getList(1, 5, {
+				filter: `user="${userId}"`,
+				sort: '-created',
+				expand: 'item'
+			});
+			console.log('Watchlist response:', watchlistResponse2);
+
+			watchlistItems = watchlistResponse2.items.map(item => ({
+				id: item.id,
+				itemId: item.item,
+				title: item.expand?.item?.title || 'Unknown Item',
+				currentBid: item.expand?.item?.current_highest_bid || 0,
+				image: item.expand?.item?.images?.[0] || '/placeholder.svg',
+				addedTime: timeAgo(item.created),
+				auctionId: item.expand?.item?.auction
+			}));
+
+		} catch (err) {
+			console.error('Error loading dashboard data:', err);
+			error = err.message;
+		} finally {
+			loading = false;
 		}
+	}
+
+	// Handler for removing items from watchlist
+	function handleWatchlistRemove(watchlistId) {
+		watchlistItems = watchlistItems.filter(item => item.id !== watchlistId);
 	}
 </script>
 
@@ -44,45 +113,33 @@
 </svelte:head>
 
 <div class="dashboard-container">
-  <h1 class="dashboard-title">Welcome to your Dashboard</h1>
-
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Watched Items</div>
-      <div class="stat-value">{stats.watchedItems}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Bids</div>
-      <div class="stat-value">{stats.activeBids}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Items Won</div>
-      <div class="stat-value">{stats.itemsWon}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total Spent</div>
-      <div class="stat-value">${stats.totalSpent.toLocaleString()}</div>
-    </div>
-  </div>
-
-  <div class="activity-card">
-    <h2 class="activity-title">Recent Activity</h2>
-    {#if recentActivity.length > 0}
-      <ul class="activity-list">
-        {#each recentActivity as activity}
-          <li class="activity-item">
-            <span class={`activity-icon ${getActivityIcon(activity.type).color} ${getActivityIcon(activity.type).bg}`}>{getActivityIcon(activity.type).icon}</span>
-            <span class="activity-content">
-              <span class="activity-text">{activity.item}</span> - {activity.type === 'bid' ? 'Bid placed' : activity.type === 'outbid' ? 'You were outbid' : 'You won'} for <span class="activity-amount">${activity.amount.toFixed(2)}</span>
-            </span>
-            <span class="activity-time">{activity.time}</span>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <div class="no-activity">No recent activity.</div>
+  <div class="dashboard-header">
+    <h1 class="dashboard-title">Welcome to your Dashboard</h1>
+    {#if !loading}
+      <p class="dashboard-subtitle">Track your bids, manage your watchlist, and monitor your auction activity</p>
     {/if}
   </div>
+
+  <!-- Loading and Error States -->
+  <DashboardLoading {loading} {error} onRetry={loadDashboardData} />
+
+  {#if !loading && !error}
+    <div class="dashboard-grid">
+      <!-- User Profile Section -->
+      <div class="profile-section">
+        <UserProfileCard />
+      </div>
+
+      <!-- Stats Section -->
+      <DashboardStats {stats} />
+
+      <!-- Watchlist Section -->
+      <DashboardWatchlist {watchlistItems} onRemoveItem={handleWatchlistRemove} />
+
+      <!-- Recent Activity Section -->
+      <DashboardActivity {recentActivity} />
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -100,122 +157,33 @@
 		font-family: 'Montserrat', sans-serif;
 	}
 
-	.stats-grid {
+	.dashboard-header {
+		margin-bottom: 2rem;
+		text-align: center;
+	}
+
+	.dashboard-subtitle {
+		color: var(--earthy-brown);
+		font-size: 1.1rem;
+		margin-top: 0.5rem;
+	}
+
+	.dashboard-grid {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 1.5rem;
+		grid-template-columns: 1fr 2fr;
+		gap: 2rem;
 		margin-bottom: 2rem;
 	}
 
-	.stat-card {
-		background-color: var(--white);
-		box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-		border-radius: 0.5rem;
-		padding: 1.5rem;
+	.profile-section {
+		grid-row: span 1;
 	}
 
-	.stat-label {
-		color: var(--earthy-brown);
-		font-size: 0.875rem;
-		margin-bottom: 0.5rem;
-	}
-
-	.stat-value {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: var(--dark-brown);
-	}
-
-	.activity-card {
-		background-color: var(--white);
-		box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-		border-radius: 0.5rem;
-		padding: 1.5rem;
-	}
-
-	.activity-title {
-		font-size: 1.25rem;
-		font-weight: 600;
-		margin-bottom: 1rem;
-		color: var(--dark-brown);
-	}
-
-	.activity-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.activity-item {
-		display: flex;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
-
-	.activity-item:last-child {
-		margin-bottom: 0;
-	}
-
-	.activity-icon {
-		margin-right: 0.75rem;
-		border-radius: 9999px;
-		padding: 0.25rem 0.5rem;
-		font-size: 1.125rem;
-	}
-
-	.activity-content {
-		flex: 1;
-		color: var(--dark-brown);
-	}
-
-	.activity-text {
-		font-weight: 500;
-	}
-
-	.activity-amount {
-		font-weight: 600;
-	}
-
-	.activity-time {
-		color: var(--earthy-brown);
-		font-size: 0.875rem;
-		margin-left: 1rem;
-	}
-
-	.no-activity {
-		color: var(--earthy-brown);
-	}
-
-	/* Activity icon colors */
-	.text-blue-600 {
-		color: #2563eb;
-	}
-
-	.bg-blue-100 {
-		background-color: #dbeafe;
-	}
-
-	.text-yellow-600 {
-		color: #d97706;
-	}
-
-	.bg-yellow-100 {
-		background-color: #fef3c7;
-	}
-
-	.text-green-600 {
-		color: #059669;
-	}
-
-	.bg-green-100 {
-		background-color: #d1fae5;
-	}
-
-	.text-gray-600 {
-		color: #4b5563;
-	}
-
-	.bg-gray-100 {
-		background-color: #f3f4f6;
+	/* Responsive design */
+	@media (max-width: 1024px) {
+		.dashboard-grid {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
 	}
 </style>

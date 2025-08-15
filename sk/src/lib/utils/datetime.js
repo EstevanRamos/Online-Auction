@@ -170,3 +170,69 @@ export function isToday(dateString) {
         return false;
     }
 }
+
+/**
+ * Get human-readable time ago string (e.g., "2 minutes ago", "1 hour ago", "3 days ago")
+ * @param {string|Date} dateInput - ISO date string or Date object
+ * @returns {string} Human-readable time ago string
+ */
+export function timeAgo(dateInput) {
+    if (!dateInput) return 'unknown';
+    
+    try {
+        const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        const now = new Date();
+        
+        if (isNaN(date.getTime())) return 'unknown';
+        
+        // Calculate difference in seconds
+        const diffMs = now.getTime() - date.getTime();
+        const diffSeconds = Math.floor(diffMs / 1000);
+        
+        // If date is in the future, return "just now"
+        if (diffSeconds < 0) return 'just now';
+        
+        // Less than a minute
+        if (diffSeconds < 60) {
+            return diffSeconds <= 5 ? 'just now' : `${diffSeconds} seconds ago`;
+        }
+        
+        // Less than an hour
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        if (diffMinutes < 60) {
+            return diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+        }
+        
+        // Less than a day
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) {
+            return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+        }
+        
+        // Less than a week
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) {
+            return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+        }
+        
+        // Less than a month
+        const diffWeeks = Math.floor(diffDays / 7);
+        if (diffWeeks < 4) {
+            return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+        }
+        
+        // Less than a year
+        const diffMonths = Math.floor(diffDays / 30);
+        if (diffMonths < 12) {
+            return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+        }
+        
+        // Years
+        const diffYears = Math.floor(diffDays / 365);
+        return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
+        
+    } catch (error) {
+        console.error('Error calculating time ago:', error);
+        return 'unknown';
+    }
+}

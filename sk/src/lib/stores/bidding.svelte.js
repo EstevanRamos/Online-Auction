@@ -1,5 +1,5 @@
 // src/lib/state/bidding.svelte.js - Bidding state with runes
-export const biddingState = $state({
+export let biddingState = $state({
   userBids: [],
   proxyBids: [],
   bidHistory: {},
@@ -8,15 +8,15 @@ export const biddingState = $state({
 });
 
 // Derived state
-export const activeBids = $derived(
+let activeBids = $derived(
   biddingState.userBids.filter(bid => bid.status === 'active')
 );
 
-export const totalBidAmount = $derived(
+let totalBidAmount = $derived(
   biddingState.userBids.reduce((total, bid) => total + bid.amount, 0)
 );
 
-export const getItemBidHistory = $derived((itemId) => {
+let getItemBidHistory = $derived((itemId) => {
   return biddingState.bidHistory[itemId] || [];
 });
 
@@ -42,7 +42,7 @@ export function updateProxyBid(itemId, proxyBid) {
   }
 }
 
-export async function placeBid(itemId, amount) {
+export async function placeBid(itemId, amount, isProxyBid = false, maxAmount = null) {
   biddingState.loading = true;
   biddingState.error = null;
   
@@ -50,15 +50,23 @@ export async function placeBid(itemId, amount) {
     const response = await fetch('/api/bids', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itemId, amount })
+      body: JSON.stringify({ 
+        itemId, 
+        amount, 
+        isProxyBid,
+        maxAmount 
+      })
     });
     
-    if (!response.ok) throw new Error('Failed to place bid');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to place bid');
+    }
     
-    const bid = await response.json();
-    addBid(bid);
+    const result = await response.json();
+    addBid(result.bid);
     
-    return { success: true, data: bid };
+    return { success: true, data: result };
   } catch (error) {
     biddingState.error = error.message;
     return { success: false, error: error.message };
