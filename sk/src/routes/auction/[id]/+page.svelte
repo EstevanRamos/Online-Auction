@@ -5,6 +5,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { formatDate, formatTime } from '$lib/utils/datetime.js';
+    import WatchlistButton from '$lib/components/watchlist-button.svelte';
 
     // Extract data with fallbacks
     const { auction, auctionItems = [], stats = {} } = data;
@@ -137,6 +138,14 @@
                                     {:else}
                                         <span class="badge badge--active">Active</span>
                                     {/if}
+                                </div>
+                                <!-- Watchlist Button -->
+                                <div class="watchlist-btn-wrapper" onclick|stopPropagation={() => {}}>
+                                    <WatchlistButton 
+                                        itemId={item.id}
+                                        size="small"
+                                        className="item-watchlist-btn"
+                                    />
                                 </div>
                             </div>
 
@@ -469,7 +478,23 @@
     .item-badges {
         position: absolute;
         top: 1rem;
+        left: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .watchlist-btn-wrapper {
+        position: absolute;
+        top: 1rem;
         right: 1rem;
+        z-index: 2;
+    }
+
+    .watchlist-btn-wrapper :global(.item-watchlist-btn) {
+        backdrop-filter: blur(8px);
+        background-color: rgba(253, 251, 247, 0.95);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
     }
 
     .badge {
