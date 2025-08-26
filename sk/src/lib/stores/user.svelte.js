@@ -84,6 +84,7 @@ class UserStore {
     }
 
     async addToWatchlist(itemId) {
+        console.log('adding to watchlist')
         try{
         await pb.collection('watchlist').create({
             user: this.user.id,
@@ -98,6 +99,7 @@ class UserStore {
     }
 
     async removeFromWatchlist(itemId) {
+        console.log("removingh from watchlist")
         try{
             console.log('Removing from watchlist:', itemId);
             const existing = await pb.collection('watchlist').getFirstListItem(`user = "${this.user.id}" && item = "${itemId}"`);

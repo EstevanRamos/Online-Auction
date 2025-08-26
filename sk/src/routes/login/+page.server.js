@@ -1,3 +1,4 @@
+import { userStore } from '$lib/stores/user.svelte.js';
 import { fail, redirect } from '@sveltejs/kit';
 
 export const actions = { 

@@ -1,4 +1,5 @@
 import PocketBase from 'pocketbase';
+import { userStore } from '$lib/stores/user.svelte';
 
 export const handle = async ({ event, resolve }) => {
     event.locals.pb = new PocketBase('http://127.0.0.1:8090');
@@ -10,6 +11,7 @@ export const handle = async ({ event, resolve }) => {
 		if (event.locals.pb.authStore.isValid) {
 			await event.locals.pb.collection('users').authRefresh()
 			event.locals.user = event.locals.pb.authStore.model
+      userStore.user = event.locals.pb.authStore.model
 		}
     } catch (_) {
         // clear the auth store on failed refresh

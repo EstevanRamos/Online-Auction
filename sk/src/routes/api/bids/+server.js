@@ -74,8 +74,8 @@ export async function POST({ request, locals }) {
 
     // Create bid record
     const bidData = {
-      item_id: itemId,
-      user_id: locals.user.id,
+      item: itemId,
+      user: locals.user.id,
       amount: amount,
       bid_type: isProxyBid ? 'proxy' : 'manual',
       timestamp: new Date().toISOString(),
@@ -163,7 +163,7 @@ export async function GET({ url, locals }) {
     }
 
     // Build filter
-    let filter = `item_id="${itemId}"`;
+    let filter = `auction_item="${itemId}"`;
     if (userId) {
       filter += ` && user_id="${userId}"`;
     }

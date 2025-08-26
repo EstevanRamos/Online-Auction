@@ -22,6 +22,7 @@
     
     async function checkWatchlistStatus() {
         if (!userStore.user || !itemId) return;
+        console.log(itemId)
         try{
             if(await userStore.checkWatchlist(itemId)){
                 isInWatchlist = true;

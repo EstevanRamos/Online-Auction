@@ -10,6 +10,7 @@
     import BidHistory from '$lib/components/bid-history.svelte';
     import { realtimeService } from '$lib/services/realtime.js';
     import { onMount, onDestroy } from 'svelte';
+    import { userStore } from '$lib/stores/user.svelte';
 
     // Extract data with fallbacks
     const { auction, auctionItem, bids: initialBids = [], stats = {}, reserveMet = true } = data;
@@ -210,7 +211,7 @@
                             
                             <!-- Watchlist Button -->
                             <div class="watchlist-overlay">
-                                <WatchlistButton itemId={auctionItem?.id} size="large" user={data.user} />
+                                <WatchlistButton itemId={auctionItem?.id} size="large" user={userStore.user} />
                             </div>
                             
                             <!-- Navigation Arrows -->

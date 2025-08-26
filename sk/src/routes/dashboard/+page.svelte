@@ -1,6 +1,6 @@
 <!-- src/routes/dashboard/+page.svelte -->
 <script>
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { userStore} from '$lib/stores/user.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import UserProfileCard from '$lib/components/user-profile-card.svelte';
@@ -13,6 +13,7 @@
 
 	// Redirect to login if not authenticated
 	onMount(async () => {
+		console.log(userStore)
 		if (!userStore.isAuthenticated) {
 			goto('/login');
 			return;

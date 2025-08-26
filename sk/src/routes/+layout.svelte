@@ -1,6 +1,8 @@
 <script>
   import "../styles.css";
+  import { userStore } from "$lib/stores/user.svelte";
   let {children, data} = $props()
+  userStore.user = data.user
   
   // Mobile menu state
   let isMobileMenuOpen = $state(false);
