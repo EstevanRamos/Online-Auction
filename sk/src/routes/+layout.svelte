@@ -1,8 +1,6 @@
 <script>
   import "../styles.css";
-  import { userStore } from "$lib/stores/user.svelte";
   let {children, data} = $props()
-  userStore.user = data.user
   
   // Mobile menu state
   let isMobileMenuOpen = $state(false);
@@ -62,7 +60,7 @@
         
         <!-- Desktop auth buttons -->
         <div class="auth-buttons desktop-auth">
-            {#if data.user === undefined}
+            {#if !data.user}
                 <a href="/login" class="btn btn-outline">Login</a>
                 <a href="/register" class="btn btn-primary">Register</a>
             {:else}
@@ -84,7 +82,7 @@
             </ul>
             
             <div class="mobile-auth-buttons">
-                {#if false}
+                {#if !data.user}
                     <a href="/login" class="btn btn-outline" onclick={closeMobileMenu}>Login</a>
                     <a href="/register" class="btn btn-primary" onclick={closeMobileMenu}>Register</a>
                 {:else}

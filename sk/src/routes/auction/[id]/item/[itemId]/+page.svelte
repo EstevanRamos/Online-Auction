@@ -2,24 +2,42 @@
     /** @type {import('./$types').PageProps} */
     let { data } = $props();
 
-    import { goto } from '$app/navigation';
-    import { page } from '$app/state';
-    import { formatDateTime, formatDate, formatTime } from '$lib/utils/datetime.js';
-    import WatchlistButton from '$lib/components/watchlist-button.svelte';
-    import BidForm from '$lib/components/bid-form.svelte';
-    import BidHistory from '$lib/components/bid-history.svelte';
-    import { realtimeService } from '$lib/services/realtime.js';
-    import { onMount, onDestroy } from 'svelte';
-    import { userStore } from '$lib/stores/user.svelte';
+    import { goto } from "$app/navigation";
+    import { page } from "$app/state";
+    import {
+        formatDateTime,
+        formatDate,
+        formatTime,
+    } from "$lib/utils/datetime.js";
+    import WatchlistButton from "$lib/components/watchlist-button.svelte";
+    import BidForm from "$lib/components/bid-form.svelte";
+    import BidHistory from "$lib/components/bid-history.svelte";
+    import { pb } from "$lib/utils/pocketbase";
+    import { onMount, onDestroy } from "svelte";
+    import { userStore } from "$lib/stores/user.svelte";
 
     // Extract data with fallbacks
-    const { auction, auctionItem, bids: initialBids = [], stats = {}, reserveMet = true } = data;
-    const { totalBids = 0, highestBid = 0, lowestBid = 0, averageBid = 0, timeRemaining = null } = stats;
+    const {
+        auction,
+        auctionItem,
+        bids: initialBids = [],
+        stats = {},
+        reserveMet = true,
+    } = data;
+    const {
+        totalBids = 0,
+        highestBid = 0,
+        lowestBid = 0,
+        averageBid = 0,
+        timeRemaining = null,
+    } = stats;
 
     // Reactive state for real-time updates
     let currentBids = $state(initialBids);
     let currentItem = $state(auctionItem);
     let currentAuction = $state(auction);
+    let showWatchlistButton = $state(data.user != null)//false if we dont have user true if we do
+
 
     // Image carousel state
     let currentImageIndex = 0;
@@ -37,7 +55,8 @@
     }
 
     function previousImage() {
-        currentImageIndex = currentImageIndex === 0 ? totalImages - 1 : currentImageIndex - 1;
+        currentImageIndex =
+            currentImageIndex === 0 ? totalImages - 1 : currentImageIndex - 1;
     }
 
     function goToImage(index) {
@@ -50,23 +69,27 @@
     }
 
     function goBackToAuctions() {
-        goto('/auction');
+        goto("/auction");
     }
 
     // Bidding functionality
     function handleBidSuccess(bidResult) {
-        console.log('Bid placed successfully:', bidResult);
+        console.log("Bid placed successfully:", bidResult);
         // Optionally refresh page data or update local state
         // Could trigger a real-time update here
     }
 
     // Calculate derived bidding values
-    const currentBid = $derived(currentItem?.current_bid || currentItem?.startingBid || 0);
+    const currentBid = $derived(
+        currentItem?.current_bid || currentItem?.startingBid || 0,
+    );
     const bidIncrement = $derived(currentItem?.bid_increment || 10);
     const minBid = $derived(currentBid + bidIncrement);
     const isAuctionEnded = $derived(() => {
         if (!currentItem?.end_time && !currentAuction?.end_time) return false;
-        const endTime = new Date(currentItem?.end_time || currentAuction?.end_time);
+        const endTime = new Date(
+            currentItem?.end_time || currentAuction?.end_time,
+        );
         return new Date() >= endTime;
     });
 
@@ -75,57 +98,67 @@
 
     // Get item status
     function getItemStatus() {
-        if (!auctionItem?.status) return 'active';
+        if (!auctionItem?.status) return "active";
         return auctionItem.status;
     }
 
     function getStatusText(status) {
         switch (status) {
-            case 'active': return 'Active';
-            case 'sold': return 'Sold';
-            case 'ended': return 'Ended';
-            case 'cancelled': return 'Cancelled';
-            default: return 'Active';
+            case "active":
+                return "Active";
+            case "sold":
+                return "Sold";
+            case "ended":
+                return "Ended";
+            case "cancelled":
+                return "Cancelled";
+            default:
+                return "Active";
         }
     }
 
     // Get status color
     function getStatusColor(status) {
         switch (status) {
-            case 'active': return '#10b981';
-            case 'sold': return '#3b82f6';
-            case 'ended': return '#6b7280';
-            case 'cancelled': return '#ef4444';
-            default: return '#10b981';
+            case "active":
+                return "#10b981";
+            case "sold":
+                return "#3b82f6";
+            case "ended":
+                return "#6b7280";
+            case "cancelled":
+                return "#ef4444";
+            default:
+                return "#10b981";
         }
     }
 
     // Real-time update handlers
     function handleRealtimeUpdate(update) {
-        console.log('Real-time update received:', update);
-        
+        console.log("Real-time update received:", update);
+
         switch (update.type) {
-            case 'bid':
+            case "bid":
                 // Update bids list
-                if (update.action === 'create') {
+                if (update.action === "create") {
                     currentBids = [update.record, ...currentBids];
-                } else if (update.action === 'update') {
-                    currentBids = currentBids.map(bid => 
-                        bid.id === update.record.id ? update.record : bid
+                } else if (update.action === "update") {
+                    currentBids = currentBids.map((bid) =>
+                        bid.id === update.record.id ? update.record : bid,
                     );
                 }
                 break;
-                
-            case 'item':
+
+            case "item":
                 // Update item data
-                if (update.action === 'update') {
+                if (update.action === "update") {
                     currentItem = { ...currentItem, ...update.record };
                 }
                 break;
-                
-            case 'auction':
+
+            case "auction":
                 // Update auction data (end time extensions, etc.)
-                if (update.action === 'update') {
+                if (update.action === "update") {
                     currentAuction = { ...currentAuction, ...update.record };
                 }
                 break;
@@ -134,39 +167,17 @@
 
     // Initialize real-time subscriptions
     onMount(() => {
-        if (auctionItem?.id) {
-            // Subscribe to bids for this item
-            const unsubBids = realtimeService.subscribeToItemBids(
-                auctionItem.id, 
-                handleRealtimeUpdate
-            );
-            unsubscribeFunctions.push(unsubBids);
-
-            // Subscribe to item updates
-            const unsubItem = realtimeService.subscribeToItemUpdates(
-                auctionItem.id, 
-                handleRealtimeUpdate
-            );
-            unsubscribeFunctions.push(unsubItem);
-        }
-
-        if (auction?.id) {
-            // Subscribe to auction updates
-            const unsubAuction = realtimeService.subscribeToAuctionUpdates(
-                auction.id, 
-                handleRealtimeUpdate
-            );
-            unsubscribeFunctions.push(unsubAuction);
-        }
+        //TODO
     });
 
     // Clean up subscriptions on destroy
     onDestroy(() => {
-        unsubscribeFunctions.forEach(unsubscribe => {
+        //TODO
+        unsubscribeFunctions.forEach((unsubscribe) => {
             try {
                 unsubscribe();
             } catch (error) {
-                console.warn('Error unsubscribing:', error);
+                console.warn("Error unsubscribing:", error);
             }
         });
         unsubscribeFunctions = [];
@@ -174,8 +185,14 @@
 </script>
 
 <svelte:head>
-    <title>{auctionItem?.title || 'Auction Item'} - {auction?.title || 'Auction'}</title>
-    <meta name="description" content="{auctionItem?.description || 'Auction item details'}" />
+    <title
+        >{auctionItem?.title || "Auction Item"} - {auction?.title ||
+            "Auction"}</title
+    >
+    <meta
+        name="description"
+        content={auctionItem?.description || "Auction item details"}
+    />
 </svelte:head>
 
 <div class="item-detail-page">
@@ -184,15 +201,21 @@
         <nav class="breadcrumb-nav" aria-label="Breadcrumb">
             <ol class="breadcrumb-list">
                 <li class="breadcrumb-item">
-                    <button class="breadcrumb-link" onclick={goBackToAuctions}>Auctions</button>
+                    <button class="breadcrumb-link" onclick={goBackToAuctions}
+                        >Auctions</button
+                    >
                 </li>
                 <li class="breadcrumb-separator">/</li>
                 <li class="breadcrumb-item">
-                    <button class="breadcrumb-link" onclick={goBackToAuctionItems}>{auction?.title || 'Auction'}</button>
+                    <button
+                        class="breadcrumb-link"
+                        onclick={goBackToAuctionItems}
+                        >{auction?.title || "Auction"}</button
+                    >
                 </li>
                 <li class="breadcrumb-separator">/</li>
                 <li class="breadcrumb-item current" aria-current="page">
-                    {auctionItem?.title || 'Item'}
+                    {auctionItem?.title || "Item"}
                 </li>
             </ol>
         </nav>
@@ -203,27 +226,59 @@
                 <div class="image-carousel">
                     {#if hasImages}
                         <div class="main-image-container">
-                            <img 
-                                src={auctionItem.images[currentImageIndex]} 
-                                alt="{auctionItem.title} - Image {currentImageIndex + 1}" 
-                                class="main-image" 
+                            <img
+                                src={auctionItem.images[currentImageIndex]}
+                                alt="{auctionItem.title} - Image {currentImageIndex +
+                                    1}"
+                                class="main-image"
                             />
-                            
+
                             <!-- Watchlist Button -->
                             <div class="watchlist-overlay">
-                                <WatchlistButton itemId={auctionItem?.id} size="large" user={userStore.user} />
+                                <WatchlistButton
+                                    itemId={auctionItem?.id}
+                                    size="large"
+                                    show= {showWatchlistButton}
+                                    user = {data.user}
+                                />
                             </div>
-                            
+
                             <!-- Navigation Arrows -->
                             {#if totalImages > 1}
-                                <button class="carousel-nav carousel-prev" onclick={previousImage} aria-label="Previous image">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                <button
+                                    class="carousel-nav carousel-prev"
+                                    onclick={previousImage}
+                                    aria-label="Previous image"
+                                >
+                                    <svg
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M15 19l-7-7 7-7"
+                                        ></path>
                                     </svg>
                                 </button>
-                                <button class="carousel-nav carousel-next" onclick={nextImage} aria-label="Next image">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                <button
+                                    class="carousel-nav carousel-next"
+                                    onclick={nextImage}
+                                    aria-label="Next image"
+                                >
+                                    <svg
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 5l7 7-7 7"
+                                        ></path>
                                     </svg>
                                 </button>
                             {/if}
@@ -233,20 +288,35 @@
                         {#if totalImages > 1}
                             <div class="thumbnail-nav">
                                 {#each auctionItem.images as image, index (index)}
-                                    <button 
-                                        class="thumbnail {index === currentImageIndex ? 'active' : ''}" 
+                                    <button
+                                        class="thumbnail {index ===
+                                        currentImageIndex
+                                            ? 'active'
+                                            : ''}"
                                         onclick={() => goToImage(index)}
                                         aria-label="Go to image {index + 1}"
                                     >
-                                        <img src={image} alt="Thumbnail {index + 1}" />
+                                        <img
+                                            src={image}
+                                            alt="Thumbnail {index + 1}"
+                                        />
                                     </button>
                                 {/each}
                             </div>
                         {/if}
                     {:else}
                         <div class="no-image">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            <svg
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                ></path>
                             </svg>
                             <p>No images available</p>
                         </div>
@@ -259,19 +329,28 @@
                 <!-- Item Header -->
                 <div class="item-header">
                     <div class="item-title-section">
-                        <h1 class="item-title">{auctionItem?.title || 'Untitled Item'}</h1>
+                        <h1 class="item-title">
+                            {auctionItem?.title || "Untitled Item"}
+                        </h1>
                         <div class="item-meta">
-                            <span class="item-status" style="background-color: {getStatusColor(getItemStatus())}">
+                            <span
+                                class="item-status"
+                                style="background-color: {getStatusColor(
+                                    getItemStatus(),
+                                )}"
+                            >
                                 {getStatusText(getItemStatus())}
                             </span>
-                            {#if auctionItem?.condition && auctionItem.condition !== 'Not specified'}
-                                <span class="item-condition">{auctionItem.condition}</span>
+                            {#if auctionItem?.condition && auctionItem.condition !== "Not specified"}
+                                <span class="item-condition"
+                                    >{auctionItem.condition}</span
+                                >
                             {/if}
                         </div>
                     </div>
-                    
+
                     <div class="item-description">
-                        {auctionItem?.description || 'No description available'}
+                        {auctionItem?.description || "No description available"}
                     </div>
                 </div>
 
@@ -280,7 +359,9 @@
                     <div class="bid-info">
                         <div class="bid-row">
                             <span class="bid-label">Starting Bid:</span>
-                            <span class="bid-value">${auctionItem?.startingBid || 0}</span>
+                            <span class="bid-value"
+                                >${auctionItem?.startingBid || 0}</span
+                            >
                         </div>
                         <div class="bid-row">
                             <span class="bid-label">Current Bid:</span>
@@ -295,8 +376,13 @@
                         {#if auctionItem?.reservePrice > 0}
                             <div class="bid-row">
                                 <span class="bid-label">Reserve Price:</span>
-                                <span class="bid-value reserve-price {reserveMet ? 'met' : 'not-met'}">
-                                    ${auctionItem.reservePrice} {reserveMet ? '(Met)' : '(Not Met)'}
+                                <span
+                                    class="bid-value reserve-price {reserveMet
+                                        ? 'met'
+                                        : 'not-met'}"
+                                >
+                                    ${auctionItem.reservePrice}
+                                    {reserveMet ? "(Met)" : "(Not Met)"}
                                 </span>
                             </div>
                         {/if}
@@ -308,25 +394,27 @@
                             <div class="bid-row">
                                 <span class="bid-label">Highest Bidder:</span>
                                 <span class="bid-value">
-                                    {auctionItem.currentHighestBid.bidder?.name || 'Anonymous'}
+                                    {auctionItem.currentHighestBid.bidder
+                                        ?.name || "Anonymous"}
                                 </span>
                             </div>
                         {/if}
                     </div>
 
                     <!-- Bid Form Component -->
-                    <BidForm 
+                    <BidForm
                         itemId={currentItem?.id}
-                        currentBid={currentBid}
-                        minBid={minBid}
-                        bidIncrement={bidIncrement}
-                        endTime={currentItem?.end_time || currentAuction?.end_time}
-                        isAuctionEnded={isAuctionEnded}
+                        {currentBid}
+                        {minBid}
+                        {bidIncrement}
+                        endTime={currentItem?.end_time ||
+                            currentAuction?.end_time}
+                        {isAuctionEnded}
                         onBidSuccess={handleBidSuccess}
                     />
 
                     <!-- Time Remaining -->
-                    {#if timeRemaining && getItemStatus() === 'active'}
+                    {#if timeRemaining && getItemStatus() === "active"}
                         <div class="time-remaining">
                             <span class="time-label">Time Remaining:</span>
                             <span class="time-value">{timeRemaining}</span>
@@ -338,28 +426,36 @@
                 <div class="specifications-section">
                     <h3 class="section-title">Item Specifications</h3>
                     <div class="specs-grid">
-                        {#if auctionItem?.dimensions && auctionItem.dimensions !== 'Not specified'}
+                        {#if auctionItem?.dimensions && auctionItem.dimensions !== "Not specified"}
                             <div class="spec-item">
                                 <span class="spec-label">Dimensions:</span>
-                                <span class="spec-value">{auctionItem.dimensions}</span>
+                                <span class="spec-value"
+                                    >{auctionItem.dimensions}</span
+                                >
                             </div>
                         {/if}
-                        {#if auctionItem?.weight && auctionItem.weight !== 'Not specified'}
+                        {#if auctionItem?.weight && auctionItem.weight !== "Not specified"}
                             <div class="spec-item">
                                 <span class="spec-label">Weight:</span>
-                                <span class="spec-value">{auctionItem.weight}</span>
+                                <span class="spec-value"
+                                    >{auctionItem.weight}</span
+                                >
                             </div>
                         {/if}
-                        {#if auctionItem?.provenance && auctionItem.provenance !== 'Not specified'}
+                        {#if auctionItem?.provenance && auctionItem.provenance !== "Not specified"}
                             <div class="spec-item">
                                 <span class="spec-label">Provenance:</span>
-                                <span class="spec-value">{auctionItem.provenance}</span>
+                                <span class="spec-value"
+                                    >{auctionItem.provenance}</span
+                                >
                             </div>
                         {/if}
-                        {#if auctionItem?.certificates && auctionItem.certificates !== 'Not specified'}
+                        {#if auctionItem?.certificates && auctionItem.certificates !== "Not specified"}
                             <div class="spec-item">
                                 <span class="spec-label">Certificates:</span>
-                                <span class="spec-value">{auctionItem.certificates}</span>
+                                <span class="spec-value"
+                                    >{auctionItem.certificates}</span
+                                >
                             </div>
                         {/if}
                     </div>
@@ -379,11 +475,19 @@
                         </div>
                         <div class="info-row">
                             <span class="info-label">Start Date:</span>
-                            <span class="info-value">{formatDate(auction?.startDate)} at {formatTime(auction?.startDate)}</span>
+                            <span class="info-value"
+                                >{formatDate(auction?.startDate)} at {formatTime(
+                                    auction?.startDate,
+                                )}</span
+                            >
                         </div>
                         <div class="info-row">
                             <span class="info-label">End Date:</span>
-                            <span class="info-value">{formatDate(auction?.endDate)} at {formatTime(auction?.endDate)}</span>
+                            <span class="info-value"
+                                >{formatDate(auction?.endDate)} at {formatTime(
+                                    auction?.endDate,
+                                )}</span
+                            >
                         </div>
                     </div>
                 </div>
@@ -391,7 +495,7 @@
         </div>
 
         <!-- Bidding History Section -->
-        <BidHistory 
+        <BidHistory
             itemId={currentItem?.id}
             bids={currentBids}
             refreshInterval={0}
@@ -481,7 +585,7 @@
         background: none;
         border: none;
         color: var(--golden-orange);
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 500;
         cursor: pointer;
         padding: 0.25rem 0;
@@ -636,7 +740,7 @@
     }
 
     .item-title {
-        font-family: 'Montserrat', sans-serif;
+        font-family: "Montserrat", sans-serif;
         font-size: 2rem;
         font-weight: 700;
         color: var(--dark-brown);
@@ -675,7 +779,7 @@
     }
 
     .item-description {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-size: 1.125rem;
         color: var(--earthy-brown);
         line-height: 1.6;
@@ -708,13 +812,13 @@
     }
 
     .bid-label {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 500;
         color: var(--earthy-brown);
     }
 
     .bid-value {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 600;
         color: var(--dark-brown);
     }
@@ -739,7 +843,7 @@
         padding: 1rem 2rem;
         border: none;
         border-radius: var(--radius-lg);
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-size: 1.125rem;
         font-weight: 600;
         cursor: pointer;
@@ -845,14 +949,14 @@
     }
 
     .time-label {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 500;
         color: var(--earthy-brown);
         margin-right: 0.5rem;
     }
 
     .time-value {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 600;
         color: var(--golden-orange);
         font-size: 1.125rem;
@@ -884,7 +988,7 @@
     }
 
     .no-bids-content h4 {
-        font-family: 'Montserrat', sans-serif;
+        font-family: "Montserrat", sans-serif;
         font-size: 1.25rem;
         font-weight: 600;
         color: var(--dark-brown);
@@ -892,7 +996,7 @@
     }
 
     .no-bids-content p {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         color: var(--earthy-brown);
         margin: 0;
         font-size: 1rem;
@@ -910,7 +1014,7 @@
     }
 
     .section-title {
-        font-family: 'Montserrat', sans-serif;
+        font-family: "Montserrat", sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: var(--dark-brown);
@@ -938,14 +1042,14 @@
 
     .spec-label,
     .info-label {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 500;
         color: var(--earthy-brown);
     }
 
     .spec-value,
     .info-value {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-weight: 600;
         color: var(--dark-brown);
         text-align: right;
@@ -975,7 +1079,7 @@
         padding: 1rem;
         font-weight: 600;
         color: var(--dark-brown);
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
     }
 
     .bid-row {
@@ -991,7 +1095,7 @@
     }
 
     .bid-cell {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         color: var(--dark-brown);
     }
 
@@ -1052,7 +1156,7 @@
     }
 
     .stat-value {
-        font-family: 'Montserrat', sans-serif;
+        font-family: "Montserrat", sans-serif;
         font-size: 1.875rem;
         font-weight: 700;
         color: var(--golden-orange);
@@ -1060,7 +1164,7 @@
     }
 
     .stat-label {
-        font-family: 'Open Sans', sans-serif;
+        font-family: "Open Sans", sans-serif;
         font-size: 0.875rem;
         color: var(--earthy-brown);
         font-weight: 500;

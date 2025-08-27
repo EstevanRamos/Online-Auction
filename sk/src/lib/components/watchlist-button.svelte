@@ -1,47 +1,69 @@
 <script>
-    import { userStore } from '$lib/stores/user.svelte';
     import { onMount } from 'svelte';
-    import { pb } from '$lib/pocketbase.js';
+    import { pb } from '$lib/utils/pocketbase.js';
     import { browser } from '$app/environment';
+    import { checkWatchlist,addToWatchlist,removeFromWatchlist } from '$lib/utils/watchlist';
     
     // Props
-    let { itemId, size = 'default', className = '' } = $props();
+    let { itemId, size = 'default', className = '', show,user} = $props();
     
-    // State
+    // Reactive authentication state
+    const isAuthenticated = $derived(!!user);
+    const currentUser = $derived(user);
+    
+    // Watchlist state (reset when auth changes)
     let isInWatchlist = $state(false);
     let loading = $state(false);
     let error = $state(null);
     let showTooltip = $state(false);
     
-    // Check if item is in watchlist on mount
+    // Check if item is in watchlist on mount (only if already authenticated)
     onMount(async () => {
-        if (userStore.isAuthenticated && itemId) {
+        previousAuthState = isAuthenticated;
+        if (isAuthenticated && itemId) {
             await checkWatchlistStatus();
         }
     });
     
+    // Reset component state when authentication state transitions occur
+    function resetComponentState() {
+        isInWatchlist = false;
+        loading = false;
+        error = null;
+        showTooltip = false;
+    }
+    
     async function checkWatchlistStatus() {
-        if (!userStore.user || !itemId) return;
-        console.log(itemId)
+        if (!currentUser || !itemId) return;
+        console.log('Checking watchlist status for item:', itemId);
+        
+        loading = true;
         try{
-            if(await userStore.checkWatchlist(itemId)){
+            if(await checkWatchlist(itemId, currentUser)){
                 isInWatchlist = true;
             } else {
                 isInWatchlist = false;
             }
-        } catch (error) {
-            console.error('Error checking watchlist status:', error);
+        } catch (err) {
+            console.error('Error checking watchlist status:', err);
+            error = 'Failed to check watchlist status';
+            // Clear error after 3 seconds
+            setTimeout(() => {
+                error = null;
+            }, 3000);
+        } finally {
+            loading = false;
         }
     }
     
     async function toggleWatchlist() {
-        if (!userStore.isAuthenticated) {
+        if (!isAuthenticated) {
             // Could trigger login modal or redirect to login
             window.location.href = '/login';
             return;
         }
         
-        if (!userStore.user || !itemId) return;
+        if (!currentUser || !itemId) return;
         
         loading = true;
         error = null;
@@ -49,8 +71,8 @@
         try {
             if (isInWatchlist) {
                 // Remove from watchlist
-                if (userStore.checkWatchlist(itemId) != null) {
-                    await userStore.removeFromWatchlist(itemId);
+                if (checkWatchlist(itemId, currentUser) != null) {
+                    await removeFromWatchlist(itemId, currentUser);
                     
                     // Update item watch count
                     try {
@@ -66,7 +88,7 @@
                 isInWatchlist = false;
             } else {
                 // Add to watchlist
-                isInWatchlist = await userStore.addToWatchlist(itemId);
+                isInWatchlist = await addToWatchlist(itemId, currentUser);
                 
                 // Update item watch count
                 try {
@@ -102,13 +124,13 @@
     
     // Get tooltip text
     function getTooltipText() {
-        if (!userStore.isAuthenticated) return 'Login to add to watchlist';
+        if (!isAuthenticated) return 'Login to add to watchlist';
         return isInWatchlist ? 'Remove from watchlist' : 'Add to watchlist';
     }
 </script>
 
-<!-- Only show if user is authenticated -->
-{#if userStore.isAuthenticated}
+<!-- Show based on reactive authentication state -->
+{#if show}
     <div class="watchlist-container">
         <button 
             class={getButtonClasses()}

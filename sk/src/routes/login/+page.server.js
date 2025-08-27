@@ -49,6 +49,7 @@ export const actions = {
             // Attempt authentication
             const authdata = await locals.pb.collection('users').authWithPassword(email, password);
             console.log("Auth successful:", authdata);
+            userStore.user = authdata.record
             
             // Set remember me if requested
             if (rememberMe) {

@@ -10,10 +10,11 @@
 	import DashboardLoading from '$lib/components/dashboard/dashboard-loading.svelte';
 	import { pb } from '$lib/pocketbase.js';
 	import { timeAgo } from '$lib/utils/datetime.js';
+    import { page } from '$app/state';
 
 	// Redirect to login if not authenticated
 	onMount(async () => {
-		console.log(userStore)
+		
 		if (!userStore.isAuthenticated) {
 			goto('/login');
 			return;
